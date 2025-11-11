@@ -19,7 +19,7 @@ app.get('/', (req, res) => {
 // WebSocket connections
 wss.on('connection', (ws) => {
   console.log('WebSocket client connected')
-
+  clients.add(ws);
   ws.on('message', (message) => {
     console.log('Received:', message.toString())
     ws.send(`Hello over WebSocket!`)
