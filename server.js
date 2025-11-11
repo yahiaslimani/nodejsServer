@@ -25,10 +25,10 @@ wss.on('connection', (ws) => {
     ws.send(`Hello over WebSocket!`)
   })
 
-  ws.on('close', () => {
+  /*ws.on('close', () => {
     clients.delete(ws);
     console.log('Client disconnected');
-  });
+  });*/
 })
 
 // HTTP server upgrade to WebSocket
