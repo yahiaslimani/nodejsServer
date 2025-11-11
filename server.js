@@ -13,7 +13,7 @@ const wss = new WebSocket.Server({ noServer: true });
 
 wss.on('connection', function connection(ws) {
   clients.add(ws);
-  console.log('Client connected');
+  ws.send('Client connected');
 
   ws.on('close', () => {
     clients.delete(ws);
