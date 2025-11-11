@@ -11,15 +11,25 @@ const clients = new Set();
 
 const wss = new WebSocket.Server({ noServer: true });
 
-wss.on('connection', function connection(ws) {
-  clients.add(ws);
-  ws.send('Client connected');
+// HTTP routes
+app.get('/', (req, res) => {
+  res.send('Hello over HTTP!')
+})
+
+// WebSocket connections
+wss.on('connection', (ws) => {
+  console.log('WebSocket client connected')
+
+  ws.on('message', (message) => {
+    console.log('Received:', message.toString())
+    ws.send(`Hello over WebSocket!`)
+  })
 
   ws.on('close', () => {
     clients.delete(ws);
     console.log('Client disconnected');
   });
-});
+})
 
 // HTTP server upgrade to WebSocket
 const server = app.listen(port, () => {
