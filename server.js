@@ -1,51 +1,15 @@
-/*const WebSocket = require('ws');
-
-// Create WebSocket server
-const wss = new WebSocket.Server({ port: process.env.PORT || 3000 });
-
-wss.on('connection', (ws) => {
-  console.log('New client connected');
-
-  // Handle incoming messages
-  ws.on('message', (message) => {
-    console.log('Received:', message.toString());
-    
-    // Broadcast to all connected clients except sender
-    wss.clients.forEach((client) => {
-      if (client !== ws && client.readyState === WebSocket.OPEN) {
-        client.send(message.toString());
-      }
-    });
-  });
-
-  // Handle client disconnect
-  ws.on('close', () => {
-    console.log('Client disconnected');
-  });
-
-  // Handle errors
-  ws.on('error', (error) => {
-    console.error('WebSocket error:', error);
-  });
-});
-
-console.log('WebSocket server running on port', process.env.PORT || 3000);
-*/
 const WebSocket = require('ws');
 
 // Configuration
-const DRIVER_WS_URL = process.env.DRIVER_WS_URL || 'ws://localhost:8080/driver'; // Internal endpoint for drivers
-const PASSENGER_WS_URL = process.env.PASSENGER_WS_URL || 'ws://localhost:8081/passenger'; // Internal endpoint for passengers
 const PORT = process.env.PORT || 3000;
 
 // Store active passenger connections
 const passengerConnections = new Set();
 
-// Create WebSocket servers
-const server = new WebSocket.Server({ port: PORT });
+// Create WebSocket server
+const wss = new WebSocket.Server({ port: PORT });
 
-// Handle incoming connections
-server.on('connection', (socket, req) => {
+wss.on('connection', (socket, req) => {
   const url = req.url;
   
   if (url === '/api/driver-location-ws') {
@@ -59,19 +23,26 @@ server.on('connection', (socket, req) => {
 
 // Handle driver connections
 function handleDriverConnection(socket) {
-  console.log('Driver connected');
+  console.log('Driver connected to /api/driver-location-ws');
   
   socket.on('message', (data) => {
     try {
       // Parse incoming driver data
       const driverData = JSON.parse(data.toString());
       
+      // Validate required fields
+      if (typeof driverData.lat !== 'number' || typeof driverData.lng !== 'number') {
+        console.error('Invalid location data received:', driverData);
+        return;
+      }
+      
       // Process/modify data as needed (currently keeping it the same)
       const processedData = {
         ...driverData,
+        // Add server timestamp if needed
+        serverTimestamp: new Date().toISOString(),
         // Example of potential modifications:
-        // processedTimestamp: new Date().toISOString(),
-        // formattedVelocity: `${driverData.velocity} m/s`
+        // processedVelocity: `${driverData.velocity} m/s`
       };
       
       // Broadcast to all passengers
@@ -94,11 +65,12 @@ function handleDriverConnection(socket) {
       console.log(`Broadcasted to ${passengerConnections.size} passengers:`, processedData);
     } catch (error) {
       console.error('Error processing driver message:', error);
+      console.error('Raw data:', data.toString());
     }
   });
   
   socket.on('close', () => {
-    console.log('Driver disconnected');
+    console.log('Driver disconnected from /api/driver-location-ws');
   });
   
   socket.on('error', (error) => {
@@ -108,7 +80,7 @@ function handleDriverConnection(socket) {
 
 // Handle passenger connections
 function handlePassengerConnection(socket) {
-  console.log('Passenger connected');
+  console.log('Passenger connected to /api/passenger-realtime-ws');
   passengerConnections.add(socket);
   
   // Send welcome message
@@ -137,7 +109,7 @@ console.log(`Passenger endpoint: /api/passenger-realtime-ws`);
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('Shutting down server...');
-  server.close(() => {
+  wss.close(() => {
     console.log('Server closed');
     process.exit(0);
   });
